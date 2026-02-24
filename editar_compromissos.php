@@ -1,41 +1,46 @@
-<?php
+<?php 
 require_once 'config.php';
+include 'session.php'; // Já inicia a sessão e verifica o login
 
 if (!isset($_GET['id'])) {
     die("ID do compromisso ausente.");
 }
 
 $id = $_GET['id'];
+$email_logado = $_SESSION['user_email'];
 
 $item = null;
 try {
-    $stmt = $pdo->prepare("SELECT id_compromissos, descricao, data, hora FROM compromissos WHERE id_compromissos = :id");
-    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-    $stmt->execute();
+    // ADEQUAÇÃO: Verificamos o ID e se pertence ao e-mail logado
+    $stmt = $pdo->prepare("SELECT id_compromissos, descricao, data, hora FROM compromissos WHERE id_compromissos = :id AND usuario_email = :email");
+    $stmt->execute([
+        ':id' => $id,
+        ':email' => $email_logado
+    ]);
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$item) {
-        die("Compromisso não encontrado.");
+        die("Acesso negado ou compromisso não encontrado.");
     }
 
 } catch (PDOException $e) {
-    die("Erro ao carregar dados do compromisso para edição: " . $e->getMessage());
+    die("Erro ao carregar dados: " . $e->getMessage());
 }
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
+    <meta charset="UTF-8">
     <title>Editar Compromisso</title>
 </head>
 <body>
     <h2>Editar Lembrete</h2>
 
     <form method="POST" action="atualizar.php">
-        <?php
-        echo "<input type='hidden' name='tipo' value='compromissos'>";
-        echo "<input type='hidden' name='id' value='" . htmlspecialchars($item['id_compromissos']) . "'>";
-        ?>
+        <input type='hidden' name='tipo' value='compromissos'>
+        <input type='hidden' name='id' value='<?php echo htmlspecialchars($item['id_compromissos']); ?>'>
+        
         <label for="descricao">Descrição:</label><br>
         <input type="text" id="descricao" name="descricao" value="<?php echo htmlspecialchars($item['descricao']); ?>" required><br><br>
 
@@ -51,8 +56,8 @@ try {
     <p>
         <a href='listar_compromissos.php'>Cancelar</a>
     </p>
-    </br>
+    <br>
     <hr/>
-    <p><a href="index.html">Inicio</a></p>
+    <p><a href="index.php">Início</a></p>
 </body>
 </html>
